@@ -23,9 +23,10 @@ jobs:
           gradle-version: 8.4
 
       - name: Build debug APK
+        working-directory: AutoRally
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
         with:
           name: AutoRally-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: AutoRally/app/build/outputs/apk/debug/app-debug.apk
