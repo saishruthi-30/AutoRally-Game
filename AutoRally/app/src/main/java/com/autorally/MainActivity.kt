@@ -13,12 +13,10 @@ import com.badlogic.gdx.backends.android.AndroidApplication
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
 
 @SuppressLint("MissingPermission")
-class MainActivity : AndroidApplication(), Platform {
+class MainActivity : AndroidApplication() {
     private lateinit var game: AutoRallyGame
     private var btCb: ((Boolean, String) -> Unit)? = null
     private var btHost = false
-
-    override val context: Context get() = this
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +25,13 @@ class MainActivity : AndroidApplication(), Platform {
             useCompass = false
             useImmersiveMode = true
         }
-        game = AutoRallyGame(this)
+        // A separate object (not MainActivity itself) because AndroidApplication already has getContext()
+        game = AutoRallyGame(object : Platform {
+            override val context: Context get() = this@MainActivity
+            override fun bluetoothAvailable() = this@MainActivity.bluetoothAvailable()
+            override fun prepareBluetooth(host: Boolean, cb: (Boolean, String) -> Unit) = this@MainActivity.prepareBluetooth(host, cb)
+            override fun share(text: String) = this@MainActivity.share(text)
+        })
         initialize(game, config)
         handleLink(intent)
     }
@@ -46,15 +50,15 @@ class MainActivity : AndroidApplication(), Platform {
         game.pendingJoinCode = code.trim().uppercase()
     }
 
-    // ---------- Platform ----------
-    override fun bluetoothAvailable(): Boolean =
+    // ---------- Android helpers used by the Platform object above ----------
+    fun bluetoothAvailable(): Boolean =
         BluetoothAdapter.getDefaultAdapter() != null && packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
 
-    override fun prepareBluetooth(host: Boolean, cb: (Boolean, String) -> Unit) {
+    fun prepareBluetooth(host: Boolean, cb: (Boolean, String) -> Unit) {
         runOnUiThread { btCb = cb; btHost = host; stepPermissions() }
     }
 
-    override fun share(text: String) {
+    fun share(text: String) {
         runOnUiThread {
             val i = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
             startActivity(Intent.createChooser(i, "Invite friends"))
